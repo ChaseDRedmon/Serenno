@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Serenno.Domain.Models;
 
-namespace Serenno.Domain
-{
+namespace Serenno.Domain;
+
     public class SerennoContextDesignFactory : IDesignTimeDbContextFactory<SerennoContext>
     {
         public SerennoContext CreateDbContext(string[] args)
@@ -19,4 +19,3 @@ namespace Serenno.Domain
             return new SerennoContext(optionsBuilder.Options);
         }
     }
-}

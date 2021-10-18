@@ -12,6 +12,7 @@ using Serenno.Domain;
 using Serenno.Domain.Models;
 using Serenno.Services;
 using Serilog;
+using Serilog.Events;
 
 namespace Serenno
 {
@@ -19,7 +20,7 @@ namespace Serenno
     {
         public static async Task<int> Main(string[] args)
         {
-            var loggerConfiguration = new LoggerConfiguration()
+            Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
                 .CreateBootstrapLogger();
@@ -27,6 +28,15 @@ namespace Serenno
             Log.Information("Starting application");
 
             var genericHost = CreateHostBuilder(args).Build();
+
+            using (var scope = genericHost.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                await using var db = services.GetRequiredService<SerennoContext>();
+                await db.Database.MigrateAsync();
+                
+                Log.Information("Database migrated!");
+            }
 
             try
             {
@@ -50,12 +60,16 @@ namespace Serenno
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .UseContentRoot(Directory.GetCurrentDirectory())
+                .ConfigureLogging((context, builder) =>
+                {
+                    builder.AddSerilog(dispose: true);
+                })
                 .ConfigureAppConfiguration((context, builder) =>
                 {
                     builder
                         .SetBasePath(Directory.GetCurrentDirectory())
                         .AddJsonFile("appsettings.json")
-                        .AddJsonFile("connections.json")
+                        .AddJsonFile("connections.json", false, false)
                         .AddEnvironmentVariables();
                 })
                 .ConfigureServices((hostContext, services) =>
@@ -69,8 +83,7 @@ namespace Serenno
                         .AddSerennoServices(hostContext.Configuration)
                         .AddMediatR(typeof(SerennoBot).Assembly, typeof(ServiceResponse).Assembly);
                     
-                    services
-                        .AddHostedService<SerennoBot>();
+                    services.AddHostedService<SerennoBot>();
                 })
                 .UseSerilog((context, provider, configuration) =>
                 {
@@ -82,8 +95,12 @@ namespace Serenno
                     if (!string.IsNullOrWhiteSpace(sentry))
                     {
                         configuration
-                            .WriteTo.Sentry(sentry)
-                            .MinimumLevel.Warning();
+                            .WriteTo.Sentry(options =>
+                            {
+                                options.MinimumBreadcrumbLevel = LogEventLevel.Information;
+                                options.MinimumEventLevel = LogEventLevel.Warning;
+                                options.Dsn = sentry;
+                            });
                     }
                 });
     }

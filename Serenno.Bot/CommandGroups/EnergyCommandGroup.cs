@@ -4,16 +4,13 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
-using Hangfire;
 using MediatR;
 using Remora.Commands.Attributes;
 using Remora.Commands.Groups;
 using Remora.Discord.API.Abstractions.Objects;
-using Remora.Discord.API.Abstractions.Rest;
 using Remora.Discord.API.Objects;
 using Remora.Discord.Commands.Conditions;
 using Remora.Discord.Commands.Contexts;
-using Remora.Discord.Core;
 using Remora.Results;
 using Serenno.Bot.Helpers;
 using Serenno.Domain.Models.Core;
@@ -28,10 +25,7 @@ namespace Serenno.Bot.CommandGroups
         private readonly IMediator _mediator;
         private readonly CommandResponder _commandResponder;
 
-        public EnergyCommandGroup(
-            ICommandContext commandContext, 
-            IMediator mediator,
-            CommandResponder commandResponder)
+        public EnergyCommandGroup(ICommandContext commandContext, IMediator mediator, CommandResponder commandResponder)
         {
             _commandContext = commandContext;
             _mediator = mediator;
@@ -42,6 +36,7 @@ namespace Serenno.Bot.CommandGroups
         public async Task<IResult> SetEnergyLevel(byte? warEnergy, byte? shipEnergy, byte? modEnergy, byte? cantinaEnergy,
             byte? normalEnergy)
         {
+            // BUG: Energy level is not set. 
             var isEverythingNull = AreAllNull(warEnergy, shipEnergy, modEnergy, cantinaEnergy, normalEnergy);
 
             if (isEverythingNull)
@@ -69,11 +64,11 @@ namespace Serenno.Bot.CommandGroups
             await _commandResponder.Respond("Successfully set energy levels");
             return Result.FromSuccess();
             
-            static bool AreAllNull(params byte?[] elements) => elements.Any(c => c is null);
+            static bool AreAllNull(params byte?[] elements) => elements.All(c => c is null);
         }
 
-        [RequireContext(ChannelContext.Guild), Command("set"), Description("Set your current energy level")]
-        public async Task<IResult> SetEnergyLevel(EnergyType energyType, byte energyAmount)
+        [RequireContext(ChannelContext.Guild), Command("set-alt"), Description("Set your current energy level")]
+        public async Task<IResult> SetEnergyAlternateLevel(EnergyType energyType, byte energyAmount)
         {
             if (energyAmount is < 0 or > 144)
             {

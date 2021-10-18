@@ -3,8 +3,9 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Serenno.Domain.Models.Core.Guilds;
 
-namespace Serenno.Domain.Models.Core.Ticket
-{
+namespace Serenno.Domain.Models.Core.Ticket;
+
+
     [Table(nameof(UserTickets), Schema = "Serenno")]
     public class UserTickets 
     {
@@ -17,6 +18,5 @@ namespace Serenno.Domain.Models.Core.Ticket
         public ushort TicketAmount { get; set; }
         
         public uint AccountFK { get; set; }
-        public virtual Account Account { get; set; }
+        public virtual SwgohAccount SwgohAccount { get; set; }
     }
-}

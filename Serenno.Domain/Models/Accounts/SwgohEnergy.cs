@@ -2,8 +2,8 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Serenno.Domain.Models.Core.Guilds;
 
-namespace Serenno.Domain.Models.Core
-{
+namespace Serenno.Domain.Models.Core;
+
     public enum EnergyType
     {
         Normal,
@@ -27,6 +27,5 @@ namespace Serenno.Domain.Models.Core
         public byte EnergyAmount { get; set; }
         
         public uint AccountId { get; set; }
-        public virtual Account Account { get; set; }
+        public virtual SwgohAccount SwgohAccount { get; set; }
     }
-}

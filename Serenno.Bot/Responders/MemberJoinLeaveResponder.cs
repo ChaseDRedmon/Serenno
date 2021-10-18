@@ -10,7 +10,7 @@ using Serenno.Services;
 
 namespace Serenno.Bot.Responders
 {
-    public class MemberJoinLeaveResponder : IResponder<IGuildMemberAdd>, IResponder<IGuildMemberRemove>
+    public class MemberJoinLeaveResponder : IResponder<IGuildMemberAdd>, IResponder<IGuildMemberRemove>, IResponder<IGuildCreate>, IResponder<IGuildDelete>
     {
         private readonly IMediator _mediator;
         private readonly IDiscordRestChannelAPI _channelApi;
@@ -29,15 +29,22 @@ namespace Serenno.Bot.Responders
                 return Result.FromSuccess();
 
             var user = gatewayEvent.User.Value;
-            
-            //await _eventQueue.Queue(new UserJoinedEvent(gatewayEvent.GuildID.Value, user.ID.Value,))
-
-            throw new NotImplementedException();
+            await _eventQueue.Queue(new UserJoinedEvent(gatewayEvent.GuildID.Value, user.ID.Value,));
         }
 
         public Task<Result> RespondAsync(IGuildMemberRemove gatewayEvent, CancellationToken cancellationToken = default)
         {
             throw new System.NotImplementedException();
+        }
+
+        public async Task<Result> RespondAsync(IGuildCreate gatewayEvent, CancellationToken ct = new CancellationToken())
+        {
+            
+        }
+
+        public async Task<Result> RespondAsync(IGuildDelete gatewayEvent, CancellationToken ct = new CancellationToken())
+        {
+            throw new NotImplementedException();
         }
     }
 }

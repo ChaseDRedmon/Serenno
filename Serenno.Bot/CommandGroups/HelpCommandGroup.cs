@@ -10,6 +10,7 @@ using Remora.Discord.API.Abstractions.Rest;
 using Remora.Discord.API.Objects;
 using Remora.Discord.Commands.Conditions;
 using Remora.Discord.Commands.Contexts;
+using Remora.Discord.Commands.Feedback.Services;
 using Remora.Results;
 
 namespace Serenno.Bot.CommandGroups
@@ -19,18 +20,18 @@ namespace Serenno.Bot.CommandGroups
     {
         private readonly IDiscordRestChannelAPI _channelApi;
         private readonly ICommandContext _commandContext;
-        private readonly IDiscordRestWebhookAPI _discordRestWebhookApi;
+        private readonly FeedbackService _feedbackService;
         private readonly IMediator _mediator;
 
         public HelpCommandGroup(
             IDiscordRestChannelAPI channelApi,
-            ICommandContext commandContext, 
-            IDiscordRestWebhookAPI discordRestWebhookApi,
-            IMediator mediator)
+            ICommandContext commandContext,
+            IMediator mediator,
+            FeedbackService feedbackService)
         {
             _channelApi = channelApi;
             _commandContext = commandContext;
-            _discordRestWebhookApi = discordRestWebhookApi;
+            _feedbackService = feedbackService;
             _mediator = mediator;
         }
         
@@ -45,8 +46,8 @@ namespace Serenno.Bot.CommandGroups
 
             if (_commandContext is not InteractionContext interactionContext)
                 return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: new[] { embed });
-            
-            var result = await _discordRestWebhookApi.EditOriginalInteractionResponseAsync(interactionContext.ApplicationID, interactionContext.Token, embeds: new[] { embed });
+
+            var result = await _feedbackService.SendContextualEmbedAsync(embed);
             return !result.IsSuccess
                 ? Result.FromError(result)
                 : Result.FromSuccess();
@@ -57,13 +58,13 @@ namespace Serenno.Bot.CommandGroups
         {
             var embed = new Embed("Register Commands", EmbedType.Rich, Colour: Color.Blue, Fields: new List<EmbedField>
             {
-                new(@"1) /register user", "Takes one argument which must be a valid SWGOH AllyCode\nValid Formats: 123-456-789 or 123456789"),
+                new("account register", "Takes one argument which must be a valid SWGOH AllyCode\nValid Formats: 123-456-789 or 123456789"),
             });
 
             if (_commandContext is not InteractionContext interactionContext)
                 return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: new[] { embed });
-            
-            var result = await _discordRestWebhookApi.EditOriginalInteractionResponseAsync(interactionContext.ApplicationID, interactionContext.Token, embeds: new[] { embed });
+
+            var result = await _feedbackService.SendContextualEmbedAsync(embed);
             return !result.IsSuccess
                 ? Result.FromError(result)
                 : Result.FromSuccess();

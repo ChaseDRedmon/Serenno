@@ -1,5 +1,5 @@
-﻿namespace Serenno.Domain.Models
-{
+﻿namespace Serenno.Domain.Models;
+
     public class SerennoConfig
     {
         public string SwgohEventsICALURL { get; set; }
@@ -12,4 +12,3 @@
         public ulong DiscordGuildSnowflake { get; set; }
         public int QueueCapacity { get; set; }
     }
-}

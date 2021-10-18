@@ -11,8 +11,10 @@ using Remora.Discord.API.Abstractions.Rest;
 using Remora.Discord.API.Objects;
 using Remora.Discord.Commands.Conditions;
 using Remora.Discord.Commands.Contexts;
+using Remora.Discord.Commands.Feedback.Services;
 using Remora.Results;
 using Serenno.Services.Accounts;
+using Serilog;
 
 namespace Serenno.Bot.CommandGroups
 {
@@ -21,15 +23,17 @@ namespace Serenno.Bot.CommandGroups
     {
         private readonly IDiscordRestChannelAPI _channelApi;
         private readonly ICommandContext _commandContext;
-        private readonly IDiscordRestWebhookAPI _discordRestWebhookApi;
         private readonly IMediator _mediator;
+        private readonly ILogger _logger;
+        private readonly FeedbackService _feedbackService;
 
-        public AccountCommandGroup(IDiscordRestChannelAPI channelApi, ICommandContext commandContext, IDiscordRestWebhookAPI discordRestWebhookApi, IMediator mediator)
+        public AccountCommandGroup(IDiscordRestChannelAPI channelApi, ICommandContext commandContext, IDiscordRestWebhookAPI discordRestWebhookApi, IMediator mediator, ILogger logger, FeedbackService feedbackService)
         {
             _channelApi = channelApi;
             _commandContext = commandContext;
-            _discordRestWebhookApi = discordRestWebhookApi;
             _mediator = mediator;
+            _logger = logger;
+            _feedbackService = feedbackService;
         }
 
         [RequireContext(ChannelContext.Guild), Command("register"), Description("Register your allycode with the bot")]
@@ -58,7 +62,8 @@ namespace Serenno.Bot.CommandGroups
                     : Result.FromSuccess();
             }
             
-            var registrationResponse = await _mediator.Send(new RegisterNewAccountRequest(_commandContext.User.ID.Value, code, isAccountPrimary));
+            // TODO: When this method is called, we need to invalidate the cache that Serenno.Services.Accounts.GetAllRegisteredAccountsRequest uses
+            var registrationResponse = await _mediator.Send(new RegisterNewAccountRequest(_commandContext.User.ID.Value, _commandContext.GuildID.Value.Value, code, isAccountPrimary));
 
             if (registrationResponse.Failure)
             {
@@ -84,7 +89,7 @@ namespace Serenno.Bot.CommandGroups
                 : Result.FromSuccess();
         }
 
-        [RequireContext(ChannelContext.Guild), Command("register-alternate"), Description("Register alternate allycodes with your account")]
+        [RequireContext(ChannelContext.Guild), Command("register-alternate"), Description("Register an alternate, non-primary allycode with your discord account")]
         public async Task<IResult> RegisterAlternateUserAsync(string allyCode)
         {
             var cleanedAllyCode = allyCode.Replace("-", string.Empty);
@@ -110,7 +115,7 @@ namespace Serenno.Bot.CommandGroups
                     : Result.FromSuccess();
             }
             
-            var registrationResponse = await _mediator.Send(new RegisterAlternateAccountRequest(_commandContext.User.ID.Value, code, false));
+            var registrationResponse = await _mediator.Send(new RegisterAlternateAccountRequest(_commandContext.User.ID.Value, _commandContext.GuildID.Value.Value, code, false));
             
             if (registrationResponse.Failure)
             {
@@ -136,14 +141,64 @@ namespace Serenno.Bot.CommandGroups
                 : Result.FromSuccess();
         }
 
+        [RequireContext(ChannelContext.Guild), Command("list"), Description("List all allycodes associated with your account")]
+        public async Task<IResult> ListAllAccounts()
+        {
+            _logger.Information("Listing accounts...");
+            
+            var user = _commandContext.User.ID.Value;
+            var allAssociatedAccounts = await _mediator.Send(new GetAllRegisteredAccountsRequest(user));
+
+            if (allAssociatedAccounts.Failure)
+            {
+                _logger.Error("Failed to read registered accounts: {Error}", allAssociatedAccounts.ErrorMessage);
+                
+                var failureEmbed = new Embed(
+                    Title: "Failed to read registered accounts", 
+                    EmbedType.Rich, 
+                    Description: allAssociatedAccounts.ErrorMessage,
+                    Colour: Color.Red);
+                
+                var responseFailureResult = await Respond(failureEmbed);
+                return Result.FromError(responseFailureResult);
+            }
+            
+            _logger.Debug("Accounts found");
+            var associatedAccounts = allAssociatedAccounts.Value;
+            var embedFields = new List<EmbedField>();
+            
+            _logger.Debug("Associated accounts: {accounts}", associatedAccounts);
+            
+            _logger.Debug("Adding embeds");
+            foreach (var account in associatedAccounts)
+            {
+                embedFields.Add(new EmbedField(account?.AccountName ?? "Debug Value", $"Allycode: {account.Allycode}\nIs Primary Account?: {account.IsPrimaryAccount}", true));
+            }
+            
+            var embed = new Embed(
+                Title: "Registered accounts", 
+                Fields: embedFields,
+                Colour: Color.Green);
+            
+            _logger.Debug("Sending response");
+            var responseResult = await Respond(embed);
+            return !responseResult.IsSuccess
+                ? Result.FromError(responseResult)
+                : Result.FromSuccess();
+        }
+
         private async Task<Result<IMessage>> Respond(Embed embed)
         {
+            _logger.Debug("Entering send method");
+            
             if (_commandContext is InteractionContext interactionContext)
             {
-                return await _discordRestWebhookApi.EditOriginalInteractionResponseAsync(interactionContext.ApplicationID, interactionContext.Token, embeds: new[] { embed });
+                _logger.Debug("Contextual message");
+                return await _feedbackService.SendContextualEmbedAsync(embed);
             }
-
-            return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: new[] {embed});
+            
+            _logger.Debug("Non-contextual message");
+            return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: new[] { embed });
         }
     }
 }

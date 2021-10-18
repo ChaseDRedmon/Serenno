@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Serenno.Domain.Models.Core.Events
-{
+namespace Serenno.Domain.Models.Core.Events;
+
     [Table(nameof(EventPhase), Schema = "Serenno")]
     public class EventPhase
     {
@@ -21,4 +21,3 @@ namespace Serenno.Domain.Models.Core.Events
         
         public ICollection<Reminder> EventPhaseReminders { get; set; }
     }
-}

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using Serenno.Domain.Models.Core.Guilds;
 
-namespace Serenno.Domain.Models.Core.Events
-{
+namespace Serenno.Domain.Models.Core.Events;
+
     [Table(nameof(Event), Schema = "Serenno")]
     public class Event
     {
@@ -16,10 +16,10 @@ namespace Serenno.Domain.Models.Core.Events
         public EventCategory EventCategory { get; set; }
         
         public uint? AccountId { get; set; }
-        public virtual Account? Account { get; set; }
+        public virtual SwgohAccount? Account { get; set; }
         
         public ulong? GuildId { get; set; }
-        public virtual Guild Guild { get; set; }
+        public virtual DiscordGuild DiscordGuild { get; set; }
         
         public virtual ICollection<Reminder>? EventReminders { get; set; }
         public virtual ICollection<EventPhase>? EventPhase { get; set; }
@@ -39,4 +39,3 @@ namespace Serenno.Domain.Models.Core.Events
         TerritoryWar,
         TerritoryBattle
     }
-}

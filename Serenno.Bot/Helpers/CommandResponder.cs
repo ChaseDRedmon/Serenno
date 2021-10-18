@@ -1,7 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 using Remora.Discord.API.Abstractions.Rest;
 using Remora.Discord.API.Objects;
 using Remora.Discord.Commands.Contexts;
+using Remora.Discord.Commands.Feedback.Services;
 using Remora.Results;
 
 namespace Serenno.Bot.Helpers
@@ -9,12 +12,12 @@ namespace Serenno.Bot.Helpers
     public class CommandResponder
     {
         private readonly ICommandContext _commandContext;
-        private readonly IDiscordRestWebhookAPI _webhookApi;
         private readonly IDiscordRestChannelAPI _channelApi;
+        private readonly FeedbackService _feedbackService;
 
-        public CommandResponder(IDiscordRestWebhookAPI webhookApi, IDiscordRestChannelAPI channelApi, ICommandContext commandContext)
+        public CommandResponder(FeedbackService feedbackService, IDiscordRestChannelAPI channelApi, ICommandContext commandContext)
         {
-            _webhookApi = webhookApi;
+            _feedbackService = feedbackService;
             _channelApi = channelApi;
             _commandContext = commandContext;
         }
@@ -23,7 +26,7 @@ namespace Serenno.Bot.Helpers
         {
             if (_commandContext is InteractionContext interactionContext)
             {
-                return await _webhookApi.EditOriginalInteractionResponseAsync(interactionContext.ApplicationID, interactionContext.Token, content: message);
+                return await _feedbackService.SendContextualContentAsync(message, Color.Green);
             }
 
             return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, content: message);
@@ -33,7 +36,7 @@ namespace Serenno.Bot.Helpers
         {
             if (_commandContext is InteractionContext interactionContext)
             {
-                return await _webhookApi.EditOriginalInteractionResponseAsync(interactionContext.ApplicationID, interactionContext.Token, embeds: new[] { embed });
+                return await _feedbackService.SendContextualEmbedAsync(embed);
             }
 
             return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: new[] { embed });
@@ -41,17 +44,12 @@ namespace Serenno.Bot.Helpers
 
         public async Task<IResult> Respond(params Embed[] embeds)
         {
-            if (_commandContext is InteractionContext interactionContext)
-            {
-                return await _webhookApi.EditOriginalInteractionResponseAsync(interactionContext.ApplicationID, interactionContext.Token, embeds: embeds);
-            }
-
+            if (_commandContext is not InteractionContext interactionContext)
+                return await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: embeds);
+            
             foreach (var embed in embeds)
             {
-                var response = await _channelApi.CreateMessageAsync(_commandContext.ChannelID, embeds: new[] { embed });
-
-                if (!response.IsSuccess)
-                    return response;
+                await _feedbackService.SendContextualEmbedAsync(embed);
             }
 
             return Result.FromSuccess();

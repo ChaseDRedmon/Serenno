@@ -3,10 +3,9 @@ using Serenno.Domain.Models.Core;
 using Serenno.Domain.Models.Core.Events;
 using Serenno.Domain.Models.Core.Guilds;
 using Serenno.Domain.Models.Core.Ticket;
-using User = Serenno.Domain.Models.Core.Guilds.User;
 
-namespace Serenno.Domain
-{
+namespace Serenno.Domain;
+
     public class SerennoContext : DbContext
     {
         public SerennoContext(DbContextOptions<SerennoContext> options) : base(options) { }
@@ -20,9 +19,8 @@ namespace Serenno.Domain
         public virtual DbSet<Event> Events { get; set; }
         public virtual DbSet<EventPhase> EventPhases { get; set; }
         public virtual DbSet<UserEnergy> Energies { get; set; }
-        public virtual DbSet<User> GuildMembers { get; set; }
+        public virtual DbSet<DiscordAccount> GuildMembers { get; set; }
         public virtual DbSet<Reminder> Reminders { get; set; }
         public virtual DbSet<UserTickets> UserTickets { get; set; }
-        public virtual DbSet<Account> Accounts { get; set; }
+        public virtual DbSet<SwgohAccount> Accounts { get; set; }
     }
-}

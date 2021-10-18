@@ -10,9 +10,12 @@ using Serenno.Services.Users;
 namespace Serenno.Services.Accounts
 {
     public sealed record AllycodeExistsRequest(uint allycode) : IRequest<bool>;
-    public sealed record InvalidateAllycodeExistsRequest(uint allycode) : IRequest { }
+
+    public sealed record InvalidateAllycodeExistsRequest(uint allycode) : IRequest;
     
-    public class DoesAllycodeExist
+    public class DoesAllycodeExist : 
+        RequestHandler<InvalidateAllycodeExistsRequest>,
+        IRequestHandler<AllycodeExistsRequest, bool>
     {
         private readonly SerennoContext _serennoContext;
         private readonly IAppCache _appCache;
@@ -29,7 +32,12 @@ namespace Serenno.Services.Accounts
                 () => _serennoContext.Accounts.AnyAsync(o => o.Allycode == request.allycode, cancellationToken: cancellationToken),
                 DateTimeOffset.Now.AddMonths(1));
         }
-        
+
+        protected override void Handle(InvalidateAllycodeExistsRequest request)
+        {
+            _appCache.Remove(GetCacheKey(request.allycode));
+        }
+
         private static string GetCacheKey(uint allycode)
         {
             return $"{nameof(AllycodeExistsRequest)}/{allycode}";

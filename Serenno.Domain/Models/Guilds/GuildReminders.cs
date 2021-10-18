@@ -1,9 +1,10 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using Serenno.Domain.Models.Core.Events;
 using Serenno.Domain.Models.Core.Guilds;
 
-namespace Serenno.Domain.Models.Core
-{
+namespace Serenno.Domain.Models.Core;
+
     public enum ReminderType
     {
         GrandArena,
@@ -13,7 +14,8 @@ namespace Serenno.Domain.Models.Core
         DailyTickets,
         Generic
     }
-
+    
+    [Table(nameof(Reminder), Schema = "Serenno")]
     public class Reminder 
     {
         public uint Id { get; set; }
@@ -30,9 +32,8 @@ namespace Serenno.Domain.Models.Core
         public EventPhase? EventPhase { get; set; }
         
         public uint? AccountId { get; set; }
-        public Account? Account { get; set; }
+        public SwgohAccount? Account { get; set; }
         
         public ulong? DiscordUserId { get; set; }
-        public User? DiscordUser { get; set; }
+        public DiscordAccount? DiscordUser { get; set; }
     }
-}
